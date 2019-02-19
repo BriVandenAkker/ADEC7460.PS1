@@ -30,7 +30,7 @@ lambda5 <- BoxCox.lambda(cangas)
 autoplot(cangas)
 autoplot(BoxCox(cangas, lambda5))   
 # Here we see that applying a BoxCox transformation does little to 
-# reduce/stabalise the variance and is unable to improve interpretability.
+# reduce/stabalize the variance and is unable to improve interpretability.
 
 #Q3
 retaildata <- readxl::read_excel("C:/Users/brian/Documents/retail.xlsx", skip=1)
@@ -91,7 +91,7 @@ checkresiduals(residuals(snaive(fcst2)))
 # with a mean slighly higher than zero. Therefore, we cannot trust this models predictions.
 
 
-#9
+#Q9
 autoplot(visnights[,"QLDMetro"])
 
 train1 <- window(visnights[, "QLDMetro"], end = max(time(visnights[,"QLDMetro"]))-1)
@@ -113,7 +113,7 @@ accuracy(fc3, train3)
 #MAPE measures 8.5 meaning about our forcast is off by 8.5% on average. For our second test set
 #we see our forcast is off by 3% on average, much better than what was predicted for our third test set.
 
-#10
+#Q10
 autoplot(dowjones) + autolayer(rwf(dowjones, drift=TRUE, h=25),
                                series="Drift")
 
@@ -137,7 +137,7 @@ autoplot(dowjones) +
 #predictive model is the random walk with a drift, although there is no good reason to assume this drift
 #is of the most reasonable trajectory. 
 
-#11
+#Q11
 autoplot(ibmclose)
 hist(ibmclose)
 max(time(ibmclose))
@@ -159,7 +159,7 @@ checkresiduals(residuals(rwf(trainSet, drift = TRUE, h = 69), series = "Drift"))
 #The ACF shows some signs of autocorrelation which might mean there are some problems with our prediction,
 # but we do see our residuals are mostly uncorrelated with mean zero represented in a normal distribution.
 
-#12
+#Q12
 autoplot(hsales)
 hist(hsales)
 boxplot(hsales)
