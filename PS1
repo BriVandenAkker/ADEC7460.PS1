@@ -1,0 +1,187 @@
+#install.packages("fpp2")
+library(fpp2)
+
+#----3.7 Excersizes -------
+
+#Q1
+lambda1 <- BoxCox.lambda(usnetelec)
+autoplot(usnetelec)
+autoplot(BoxCox(usnetelec, lambda1))
+
+lambda2 <- BoxCox.lambda(usgdp)
+autoplot(usgdp)
+autoplot(BoxCox(usgdp, lambda2))
+
+lambda3 <- BoxCox.lambda(mcopper)
+autoplot(mcopper)
+autoplot(BoxCox(mcopper, lambda3))
+
+lambda4 <- BoxCox.lambda(enplanements)
+autoplot(enplanements)
+autoplot(BoxCox(enplanements, lambda4))
+
+Q1 <- cbind(lambda1, lambda2, lambda3, lambda4)
+print(Q1)
+#>     lambda1  lambda2   lambda3    lambda4
+#> [1,] 0.5167714 0.366352 0.1919047 -0.2269461
+
+#Q2
+lambda5 <- BoxCox.lambda(cangas)
+autoplot(cangas)
+autoplot(BoxCox(cangas, lambda5))   
+# Here we see that applying a BoxCox transformation does little to 
+# reduce/stabalise the variance and is unable to improve interpretability.
+
+#Q3
+retaildata <- readxl::read_excel("C:/Users/brian/Documents/retail.xlsx", skip=1)
+retailTS <- ts(retaildata[,"A3349397X"],
+               frequency=12, start=c(1982,4))
+autoplot(retailTS)
+lambda6 <- BoxCox.lambda(retailTS)
+autoplot(BoxCox(retailTS, lambda6))
+print(lambda6)
+## Here our best BoxCox transformation is 0.46 or around (1/2).
+
+#Q4
+autoplot(dole)
+lambda.dole <- BoxCox.lambda(dole)
+autoplot(BoxCox(dole, lambda.dole))
+#Here a transformation is appropriate as we see low variance early in the ts
+#and much higher variance later on. We can stabalize variance best with a lambda = .32
+
+autoplot(usdeaths)
+#Transformations will not help here. We see signs of seasonality but there is
+#no obvious reason that a transformation would improve interpretability or predictability.
+
+autoplot(bricksq)
+lambda.bricksq <- BoxCox.lambda(bricksq)
+autoplot(BoxCox(bricksq, lambda.bricksq))
+#At first glance it seems as if a transformation might help linearize our observations
+#However following an optimal BoxCox transformation we see little improvement
+#and would be better of leaving data unchanged for better interpretability.
+
+#Q5
+beer <- window(ausbeer, start=1992)
+prd <- snaive(beer)
+autoplot(prd)
+checkresiduals(residuals(prd))
+#Here we see one observation which shows autocorrelation statistically different from zero.
+#However, this is might be random as it's the only statistically significant
+#evidence for autocorrelation we have in the time series. Also, we see our 
+#our residuals have close to a mean of zero and loosly resemble a normal distribution. 
+#From this we can argue that our residuals are indeed whitenoise of normal distributuion.
+
+#Q6
+autoplot(WWWusage)
+fcst1 <- window(WWWusage, start = length(WWWusage)/2)
+autoplot(naive(fcst1))
+checkresiduals(residuals(naive(fcst1)))
+#Here we see that there are statistically significant reasons for rejecting our null
+#hypothesis that there is no autocorrelation. Although we do see that our residuals 
+#have a mean zero with a normal distribution, there is obviously correlelation between our
+#residuals meaning this is a bad predictive model.
+
+autoplot(bricksq)
+fcst2 <- window(bricksq, start = 1970)
+autoplot(snaive(fcst2))
+checkresiduals(residuals(snaive(fcst2)))
+#Here we see signs of seasonality which means we'll use the seasonal naive model.
+#Our results show that there are statistically significan reasons to reject the hypothesis
+#that there are no signs of correlation among the residuals. We also see a distributuion 
+# with a mean slighly higher than zero. Therefore, we cannot trust this models predictions.
+
+
+#9
+autoplot(visnights[,"QLDMetro"])
+
+train1 <- window(visnights[, "QLDMetro"], end = max(time(visnights[,"QLDMetro"]))-1)
+train2 <- window(visnights[, "QLDMetro"], end = max(time(visnights[,"QLDMetro"]))-2)
+train3 <- window(visnights[, "QLDMetro"], end = max(time(visnights[,"QLDMetro"]))-3)
+
+fc1 <- snaive(train1, h = 4)
+fc2 <- snaive(train2, h = 4)
+fc3 <- snaive(train3, h = 4)
+
+train1 <- window(visnights[, "QLDMetro"], start = max(time(visnights[,"QLDMetro"]))-1)
+train2 <- window(visnights[, "QLDMetro"], start = max(time(visnights[,"QLDMetro"]))-2)
+train3 <- window(visnights[, "QLDMetro"], start = max(time(visnights[,"QLDMetro"]))-3)
+
+accuracy(fc1, train1)
+accuracy(fc2, train2)
+accuracy(fc3, train3)
+#We see the MAPE for our three test sets vary signifiantly relative to eachother. The highest
+#MAPE measures 8.5 meaning about our forcast is off by 8.5% on average. For our second test set
+#we see our forcast is off by 3% on average, much better than what was predicted for our third test set.
+
+#10
+autoplot(dowjones) + autolayer(rwf(dowjones, drift=TRUE, h=25),
+                               series="Drift")
+
+summary(rwf(dowjones, drift = TRUE, h = 25), series = "Drift")
+slope1 <- (dowjones[max(time(dowjones))]-dowjones[min(time(dowjones))])/(max(time(dowjones))-min(time(dowjones)))
+print(slope1)  
+#Here we can see in the summary the slope of our drift line is equivalent to the slope of the line connecting
+#the last observation with the first. Because the drift line begins at the last observation we can conclude
+#that it is simply a continuation of the ray from the initial point through the last observation available.
+
+autoplot(dowjones) +
+  autolayer(meanf(dowjones, h=25),
+            series="Mean", PI=FALSE) +
+  autolayer(rwf(dowjones, h=25),
+            series="Naïve", PI=FALSE) +
+  autolayer(rwf(dowjones, drift=TRUE, h=25),
+            series="Drift", PI=FALSE)
+
+#Its very difficult to say what's "best" because we can't know the future. Still we know that stocks do tend to
+#follow a random walk much of the time and here our data clearly shows an upward trend. Therefore, our best
+#predictive model is the random walk with a drift, although there is no good reason to assume this drift
+#is of the most reasonable trajectory. 
+
+#11
+autoplot(ibmclose)
+hist(ibmclose)
+max(time(ibmclose))
+trainSet <- window(ibmclose, end = 300)
+testSet <- window(ibmclose, start = 301)
+
+autoplot(trainSet) +
+  autolayer(meanf(trainSet, h=69),
+            series="Mean", PI=FALSE) +
+  autolayer(rwf(trainSet, h=69),
+            series="Naïve", PI=FALSE) +
+  autolayer(rwf(trainSet, drift=TRUE, h=69),
+            series="Drift") + 
+  autolayer(testSet)
+#Here we see that the random walk with a drift provided the best prediction as the test set remained
+#relatively close to the prediction line and well within our 95% prediction interval. 
+
+checkresiduals(residuals(rwf(trainSet, drift = TRUE, h = 69), series = "Drift"))
+#The ACF shows some signs of autocorrelation which might mean there are some problems with our prediction,
+# but we do see our residuals are mostly uncorrelated with mean zero represented in a normal distribution.
+
+#12
+autoplot(hsales)
+hist(hsales)
+boxplot(hsales)
+time(hsales)
+htrainSet <- window(hsales, end = (max(time(hsales))) - 2)
+htestSet <- window(hsales, start = (max(time(hsales))) - 2)
+
+autoplot(htrainSet) +
+  autolayer(meanf(htrainSet, h=2*12),
+            series="Mean", PI=FALSE) +
+  autolayer(rwf(htrainSet, h=2*12),
+            series="Naïve", PI=FALSE) +
+  autolayer(rwf(htrainSet, drift=TRUE, h=2*12),
+            series="Drift") +
+  autolayer(htestSet)
+
+autoplot(snaive(htrainSet)) + 
+  autolayer(htestSet)
+#We see signs of seasonality in our training set and we also see that a seasonal naive forecast
+#provides the closest prediction results to our observed data in the test set.
+
+checkresiduals(residuals(snaive(htrainSet)))
+#Here we see there is strong evidence for collinearity in our residuals meaning that our models
+#assumptions are not met suggesting that the prediction intervals associated with our prediction
+#lack useful information.
