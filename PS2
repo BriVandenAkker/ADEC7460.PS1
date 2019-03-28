@@ -1,0 +1,230 @@
+#======================================================================================
+#Brian VandenAkker
+#Problem Set 2
+#ADEC 7460
+#======================================================================================
+rm(list = ls())
+cat("\f")
+
+#install.packages("fpp2")
+
+library(fpp2)
+library(expsmooth)
+library(urca)
+
+#3===================================================================================================
+
+#3.1
+acf(usnetelec)
+L1 <- BoxCox.lambda(usnetelec) #Find optimal lambda
+data <- BoxCox(usnetelec, lambda = L1)
+data %>% ur.kpss() %>% summary()  # t-stat is approx two time larger than 1pct critical value. Suggests we should difference
+data %>% diff() %>% ur.kpss() %>% summary() #We can no longer reject the null hypothesis (that our data is stationary) at 95% confidence.
+plot(diff(data)) #Difference and Transform using BoxCox w/ lambda ~ 0.5. Resembles stationary timeseries
+acf(diff(data)) #Only see signs of ACF on the initial lag.
+#check ndiffs
+ndiffs(usnetelec)
+#BoxCox Lambda = 0.5, 1st order differencing.
+
+#3.2
+acf(usgdp)
+L1 <- BoxCox.lambda(usgdp) #Find optimal lambda
+data <- BoxCox(usgdp, lambda = L1)
+ndiffs(usgdp) #Two for untransformed data
+ndiffs(data) #One for transformed data
+acf(diff(data)) #Only see signs of ACF on the initial lag.
+
+#BoxCox Lambda = 0.37, 1st order differencing.
+
+#3.3
+acf(mcopper)
+L1 <- BoxCox.lambda(mcopper) #Find optimal lambda
+data <- BoxCox(mcopper, lambda = L1)
+data %>% ur.kpss() %>% summary()  # t-stat is larger than 1pct critical value. Suggests we should difference
+data %>% diff() %>% ur.kpss() %>% summary() #We can no longer reject the null hypothesis (that our data is stationary). Therefore, we accept that our data is now stationary.
+plot(diff(data)) #Difference and Transform using BoxCox w/ lambda ~ 0.19. Resembles stationary timeseries
+acf(diff(data)) #Only see signs of ACF initially.
+
+#check
+ndiffs(data) #One for transformed series
+ndiffs(mcopper) #Also for untransformed series
+#BoxCox Lambda = 0.19, 1st order differencing.
+
+#3.4
+acf(enplanements)
+L1 <- BoxCox.lambda(enplanements) #Find optimal lambda
+data <- BoxCox(enplanements, lambda = L1)
+data %>% ur.kpss() %>% summary()  # t-stat is larger than 1pct critical value. Suggests we should difference
+data %>% diff() %>% ur.kpss() %>% summary() #We can no longer reject the null hypothesis (that our data is stationary). Therefore, we accept that our data is now stationary.
+plot(diff(data)) #Difference and Transform using BoxCox w/ lambda ~ -.23. We see signs of seasonality with an outlier.
+acf(diff(data)) #Seasonality confirmed
+
+plot(diff(data,12)) #Adjust for seasonal component
+acf(diff(diff(data,12))) #More white noise if differenced twice for this seasonal data
+
+ndiffs(data, 12) #Still, this function only calls for first order differencing
+ndiffs(enplanements, 12)
+
+#BoxCox Lambda = -0.23, 1st order differencing.
+
+#3.5
+acf(visitors)
+L1 <- BoxCox.lambda(visitors) #Find optimal lambda
+data <- BoxCox(visitors, lambda = L1)
+data %>% ur.kpss() %>% summary()  # t-stat is larger than 1pct critical value. Suggests we should difference
+data %>% diff() %>% ur.kpss() %>% summary() #We can no longer reject the null hypothesis (that our data is stationary). Therefore, we accept that our data is now stationary.
+plot(diff(data)) #Difference and Transform using BoxCox w/ lambda ~ 0.28. We see signs of seasonality with an outlier.
+acf(diff(data)) #Seasonality confirmed
+plot(diff(data, 12))#Adjust differencing for seasonal component
+acf(diff(diff(data,12))) #Still we see more whitenoise from second differencing.
+
+ndiffs(data, 12) #Only one for both transformed/untransformed data
+ndiffs(enplanements, 12)
+
+#BoxCox Lambda = 0.28, 1st order differencing.
+
+
+#8===========================================================================================================
+
+#8.1
+
+fit <- auto.arima(austa)
+fit
+#Selected: ARIMA(0,1,1)
+checkresiduals(fit)
+#We can see the residuals do look like white noise with mean zero and a relatively normal distribution.
+#This plot shows that we expect the rising trend to continue for the next ten years. 
+autoplot(forecast(fit, h = 10))
+
+#8.2
+
+#By excluding drift we see drastic changes in our forecast. This is essentially a naive forecast with wider prediction intervals than the previous plot.
+austa %>% Arima(order = c(0,1,1), include.drift = FALSE) %>% forecast() %>% autoplot()
+#By excluding the moving average term we see the prediction intervals shrink which might cause some suspision if we look at the historical observations.
+austa %>% Arima(order = c(0,1,0), include.drift = FALSE) %>% forecast() %>% autoplot()
+
+#8.3
+
+austa %>% Arima(order = c(2,1,3), include.drift = TRUE) %>% forecast() %>% autoplot()
+#Remove Constant
+austa %>% Arima(order = c(2,1,3), include.drift = TRUE, include.constant = FALSE) %>% forecast() %>% autoplot()
+#ERROR: Removing the constant is the same as removing drift when d = 1, but the model specifically says to include drift. 
+
+#8.4
+
+#We see discontinuity which evolves into a mean forecast.
+austa %>% Arima(order = c(0,0,1), include.constant = TRUE) %>% forecast() %>% autoplot()
+#Removing the moving average term implies we are forecasting whitenoise which explains the mean forecast and wide prediction intervals 
+austa %>% Arima(order = c(0,0,0), include.constant = TRUE) %>% forecast() %>% autoplot()
+
+#8.5
+#Here we can see a linear trend with concave prediction intervals. 
+austa %>% Arima(order = c(0,2,1), include.constant = FALSE) %>% forecast() %>% autoplot()
+
+
+#12=========================================================================================================
+
+#12.1
+plot(mcopper) #Looks like a transformation could help
+lambda <- BoxCox.lambda(mcopper)
+mcopper <- BoxCox(mcopper, lambda = lambda)
+plot(mcopper) #Better
+
+#12.2
+auto.arima(mcopper)  #auto.arima chooses ARIMA(0,1,1) with no drift and an AIC of -86.1
+
+#12.3
+mcopper %>% Arima(order = c(0,1,1), include.drift = TRUE) #Good, but AIC is slightly higher as expected drift isn't significant
+mcopper %>% Arima(order = c(1,1,1), include.drift = FALSE) #Avoid AR term as it's not significant
+mcopper %>% Arima(order = c(1,1,1), include.drift = TRUE)
+mcopper %>% Arima(order = c(0,1,2), include.drift = TRUE) #Slightly higher AIC
+mcopper %>% Arima(order = c(0,2,1), include.drift = TRUE)
+#Some models are close in perfromance but we see the moving average is the only significant coefficient throughout. Arima(0,1,1) seems to be the strongest local model. I'll choose that.
+
+model <- auto.arima(mcopper)
+
+#12.4
+
+#Our residuals show white noise. We can see there's no signs of autocorrelation and they're normally distributed with a mean of zero.
+checkresiduals(model)
+
+#12.5
+
+#The model seems naive but relatively reasonable. It might be more reasonable to assume an upward trend. But,
+#the prediction intervals are wide because of this high volatility in recent years. There could easily be 
+#over-inflation in the data which is why our forecast should consider potential reversals of the upward trend
+#following this large spike. 
+
+#Use h=20 to better visualize trends
+model %>% forecast(h = 20) %>% autoplot()
+
+
+#12.6
+
+#Note this data is transformed
+mcopper %>% ets() %>% forecast(h=20) %>% autoplot()
+
+#Here we see much wider prediction intervals due to the uncertainty discussed above. It's also interesting to see that
+#our forecasts are no longer naive. Our trend is strongly downward initially which gradually smooths as it becomes more uncertain in more distant years.
+
+
+#13============================================================================================================
+
+#13.1
+plot(qcement)
+#We see a linear trend with seasonality which shows signs of heteroskedasticity.
+
+lam <- BoxCox.lambda(qcement)
+dta <- BoxCox(qcement, lambda = lam)
+plot(dta) #Better, variance seems to be constant, no longer linear though and still seasonal. 
+
+#13.2
+
+#The data is very clearly not stationary
+ndiffs(dta) #Suggests 2nd order differencing
+dta %>% ur.kpss() %>% summary()
+dta %>% diff() %>% ur.kpss() %>% summary()
+dta %>% diff() %>% diff() %>% ur.kpss() %>% summary() #confirmed, T-stat is not low until 2nd difference
+
+#13.3
+
+dta %>% Arima(order = c(0,2,0), include.drift = TRUE) #AIC -244.52
+dta %>% Arima(order = c(0,2,0), include.drift = FALSE) 
+dta %>% Arima(order = c(0,2,1), include.drift = TRUE) #AIC-451.95
+dta %>% Arima(order = c(0,2,1), include.drift = FALSE) 
+dta %>% Arima(order = c(1,2,0), include.drift = TRUE) #AIC -309.2
+dta %>% Arima(order = c(1,2,0), include.drift = FALSE) 
+dta %>% Arima(order = c(0,2,2), include.drift = TRUE) #AIC-512.17
+dta %>% Arima(order = c(0,2,2), include.drift = FALSE)
+dta %>% Arima(order = c(0,2,3), include.drift = TRUE) #AIC-515.93
+dta %>% Arima(order = c(0,2,3), include.drift = FALSE)
+dta %>% Arima(order = c(0,2,4), include.drift = TRUE) #AIC-533.23 #Best model. Lowest AIC of the sample
+dta %>% Arima(order = c(0,2,4), include.drift = FALSE)
+
+
+
+#13.4
+
+dta %>% Arima(order = c(0,2,4), include.drift = FALSE) %>% summary() #Best model *provisionally
+
+checkresiduals(dta %>% Arima(order = c(0,2,4), include.drift = FALSE)) #Residuals do not resemble white noise.Correlation due to seasonality.
+
+#Try another model to see if we can fix this
+checkresiduals(dta %>% Arima(order = c(0,3,4), include.drift = FALSE)) #Still we have this problem of autocorrelated residuals
+
+#Check to see what auto.arima() finds
+auto.arima(dta) #Uses ARIMA(1,1,0)/(1,1,2) w/ AIC: -802.35 which is lower than what I chose.
+checkresiduals(auto.arima(dta)) #This is much better as it corrects for seasonal data. Residuals are white noise (One significant observation could be a coincidence) with a mean of zero and normal distribution. 
+#I'll choose the model chosen by auto.arima. It is overall a better model.
+
+model <- auto.arima(dta)
+
+#13.5
+model %>% forecast(h=24) %>% autoplot() #Forecasts seasonal data with a slight positive trend. Prediction intervals get wide towards month 24.
+#Compare to what I chose prior to auto.arima
+dta %>% Arima(order = c(0,2,4), include.drift = FALSE) %>% forecast(h=24) %>% autoplot() #Naive and fails to consider seasonality
+
+#13.6
+etsModel <- ets(dta)
+etsModel %>% forecast(h=24) %>% autoplot() #This method ignores the trend that ARIMA chooses to consider. This is essentially a seasonally naive model
+#One potential advantage is it seems the prediciton intervals are slightly narrower for the ets model. 
