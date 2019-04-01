@@ -13,10 +13,7 @@ for (i in 1:length(library.list)) {
   }
   library(library.list[i], character.only = TRUE)
 }
-rm(library.list)
-library(fpp2)
-library(expsmooth)
-library(urca)
+rm(library.list, i)
 
 #3===================================================================================================
 
