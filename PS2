@@ -6,8 +6,14 @@
 rm(list = ls())
 cat("\f")
 
-#install.packages("fpp2")
-
+library.list <- c("fpp2", "expsmooth", "urca")
+for (i in 1:length(library.list)) {
+  if (!library.list[i] %in% rownames(installed.packages())) {
+    install.packages(library.list[i])
+  }
+  library(library.list[i], character.only = TRUE)
+}
+rm(library.list)
 library(fpp2)
 library(expsmooth)
 library(urca)
@@ -227,4 +233,5 @@ dta %>% Arima(order = c(0,2,4), include.drift = FALSE) %>% forecast(h=24) %>% au
 #13.6
 etsModel <- ets(dta)
 etsModel %>% forecast(h=24) %>% autoplot() #This method ignores the trend that ARIMA chooses to consider. This is essentially a seasonally naive model
-#One potential advantage is it seems the prediciton intervals are slightly narrower for the ets model. 
+#One potential advantage is it seems the prediction intervals are slightly narrower for the ets model. 
+
