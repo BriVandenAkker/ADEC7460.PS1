@@ -1,0 +1,103 @@
+#ADEC 7460: Predictive Analytics and Forecasting
+#Problem Set 3
+#Brian VandenAkker
+#=======================================================================================================
+#Set-Up
+install.packages("xts")
+library(forecast)
+library(fpp2)
+
+#=======================================================================================================
+#Q1
+#=======================================================================================================
+summary(advert)
+
+#A -----------------------------------------------------------------------------------------------------
+autoplot(advert, facets = FALSE)
+autoplot(advert, facets = TRUE)
+#Setting facets = TRUE allows us to plot each variable independently according to the appropriate scale.
+
+#B -----------------------------------------------------------------------------------------------------
+reg1 <- tslm(sales ~ advert, data = advert)
+summary(reg1)
+
+#C -----------------------------------------------------------------------------------------------------
+#Here we can see in the ACF plot that the first two lags show evidence for correlation at the 95% confidence level
+checkresiduals(reg1)
+
+#D -----------------------------------------------------------------------------------------------------
+reg2 <- Arima(advert[,"sales"], xreg = advert[,"advert"], order=c(0,0,0))
+summary(reg2)
+checkresiduals(reg2)
+#The coefficient and standard errors are slightly lower though largely similar to the results in reg1
+#We also still have evidence for autocorrelation
+#E -----------------------------------------------------------------------------------------------------
+reg3 <- auto.arima(advert[, "sales"], xreg = advert[, "advert"])
+summary(reg3)
+#Selected ARIMA model: ARIMA(0,1,0)
+#Here the coefficient and standard error is lower for advertising: 0.5343 for ARIMA(0,0,0); 0.5063 for ARIMA(0,1,0) 
+
+#F -----------------------------------------------------------------------------------------------------
+checkresiduals(reg3)
+#We no longer see any signs of autocorrelation due to differencing used in the auto.arima model
+
+#G -----------------------------------------------------------------------------------------------------
+forecast <- forecast(reg3, h = 6, xreg = rep(10,6))
+autoplot(forecast) + ylab("Sales") + xlab("Months")
+#With a defined advertising budget of 10 units per month we see the results are naive and predicted to remain
+#around the historical mean.
+mean(advert[,'sales'])
+
+#=======================================================================================================
+#Q3
+#=======================================================================================================
+summary(motel)
+
+#A------------------------------------------------------------------------------------------------------
+avg.cost <- motel[, "Takings"] / motel[, "Roomnights"]
+avg.cost
+autoplot(avg.cost)
+#We can see a clear upward trend in the average cost as well as potentially small signs of seasonality
+#from 1980 to 1990. After 1990 the trend flattens though some seasonality might still be present
+
+#B------------------------------------------------------------------------------------------------------
+#Seems like monthly CPI is already integrated into the motel dataset which provides naive predictions for
+#months based off of quarterly data in cpimel
+cpimel
+motel[,'CPI']
+
+#C------------------------------------------------------------------------------------------------------
+autoplot(avg.cost)
+autoplot(motel[,'CPI'])
+#We can see signs of heteroskedasticity which can be reduced by a logarithmic transformation for our variables
+autoplot(log(avg.cost))
+autoplot(log(motel[,'CPI']))
+
+#D------------------------------------------------------------------------------------------------------
+reg2.1 <- tslm(avg.cost ~ motel[,'CPI'],lambda = 0) #lambda = 0 for log transformation
+checkresiduals(reg2.1) #Severe signs of autocorrelation.
+summary(reg2.1)
+
+#Try Error model
+
+reg2.2 <- Arima(avg.cost, xreg = motel[,'CPI'], order=c(0,0,0))
+summary(reg2.2)
+checkresiduals(reg2.2) #Still see significant signs of autocorrelation and smaller coefficients than with tslm 
+
+#Try auto.arima()
+reg2.3 <- auto.arima(avg.cost, xreg = motel[,'CPI'])
+summary(reg2.3)
+#Selects a seasonal ARIMA model: ARIMA(1,0,1)(0,1,2)[12]
+checkresiduals(reg2.3)
+#This method reduces the residuals to white noise, meaning we no longer see signs of autocorrelation largely do to the seasonal component
+#The model selected by auto.arima is the 'best local model' as it reduces the residuals to white noise and returns
+#a comparatively low AIC: -1790.
+
+#E------------------------------------------------------------------------------------------------------
+forecast.cpi <- forecast(motel[,'CPI'], h = 12)
+forecast.avg.cost <- forecast(reg2.3, h = 12, xreg = forecast.cpi$mean)
+
+autoplot(forecast.avg.cost) + ylab("Average Price Per Room") + xlab("Years")
+#We can see from the forecast that average room cost is expected (from the auto.arima model) to rise slightly
+#We an also see that the prediction intervals are narrow  and ton't seem to increase with time which
+#should be taken into consideration. 
